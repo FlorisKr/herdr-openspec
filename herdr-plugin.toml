@@ -1,0 +1,45 @@
+id = "openspec"
+name = "openspec"
+version = "0.5.0"
+description = "OpenSpec status in the sidebar and a change browser (ctrl+b t)"
+min_herdr_version = "0.9.3"
+platforms = ["macos", "linux"]
+
+# ctrl+b t (see README) invokes this action; it opens the `browser` pane as a
+# popup for the workspace it was invoked from.
+[[actions]]
+id = "openspec-browse"
+title = "Browse OpenSpec changes"
+description = "Changes, tasks, proposal, design and specs of this workspace's project"
+contexts = ["global", "workspace", "tab", "pane"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/ospec\" popup"]
+
+[[panes]]
+id = "browser"
+title = "OpenSpec"
+placement = "popup"
+width = "90%"
+height = "90%"
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/ospec\""]
+
+# Refresh the sidebar only while herdr runs: once at startup, then on events
+# that follow real work (an agent finishing or starting a turn, switching panes,
+# opening workspaces). `ospec sync` coalesces bursts, so overlapping events are cheap.
+[[startup]]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/ospec\" sync"]
+
+[[events]]
+on = "pane.agent_status_changed"
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/ospec\" sync"]
+
+[[events]]
+on = "pane.focused"
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/ospec\" sync"]
+
+[[events]]
+on = "workspace.created"
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/ospec\" sync"]
+
+[[events]]
+on = "pane.created"
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/ospec\" sync"]

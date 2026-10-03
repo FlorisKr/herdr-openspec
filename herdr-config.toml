@@ -1,0 +1,18 @@
+# OpenSpec browser — ctrl+b t opens it for the focused workspace's project
+[[keys.command]]
+key = "prefix+t"
+type = "plugin_action"
+command = "openspec-browse"
+
+# Sidebar: wider, plus two rows reported by `ospec sync` — project overview and the change with local edits
+[ui]
+sidebar_width = 34
+sidebar_max_width = 36
+
+[ui.sidebar.spaces]
+rows = [
+  ["state_icon", "workspace"],
+  ["branch", "git_status"],
+  [{ token = "$openspec", fg = "#89b4fa" }],
+  [{ token = "$openspec_change", dim = true }],
+]

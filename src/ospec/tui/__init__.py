@@ -1,0 +1,1 @@
+"""The curses change browser."""

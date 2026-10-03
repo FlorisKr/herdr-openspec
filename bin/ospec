@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+"""Run ospec straight from a checkout (the herdr plugin and ~/.local/bin/ospec both point here)."""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+from ospec.cli import main  # noqa: E402
+
+sys.exit(main())
