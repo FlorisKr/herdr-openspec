@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 CREATED = re.compile(r"^created:\s*(\S+)", re.MULTILINE)
+ARCHIVED = re.compile(r"^(\d{4}-\d{2}-\d{2})-(.+)$")
 
 
 class DocKind(Enum):
@@ -49,6 +50,7 @@ class Change:
     groups: tuple[TaskGroup, ...]
     next_task: str | None
     mtime: float
+    archived: str = ""  # archive date; "" for an open change
 
     @property
     def done(self) -> int:
@@ -103,6 +105,12 @@ def parse_tasks(text: str) -> tuple[tuple[TaskGroup, ...], str | None]:
             next_task = match.group(3).strip()
     groups = tuple(TaskGroup(title, done, total) for title, (done, total) in zip(titles, counts))
     return groups, next_task
+
+
+def parse_archived(folder: str) -> tuple[str, str]:
+    """('2026-09-30-add-thing') -> ('2026-09-30', 'add-thing'); a folder without a date keeps its name."""
+    match = ARCHIVED.match(folder)
+    return (match.group(1), match.group(2)) if match else ("", folder)
 
 
 def parse_created(meta: str) -> str:

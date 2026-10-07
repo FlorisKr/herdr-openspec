@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from helpers import make_project
-from ospec.repository import find_project, load_changes
+from ospec.repository import find_project, load_archived, load_changes
 
 
 class RepositoryTest(unittest.TestCase):
@@ -40,6 +40,19 @@ class RepositoryTest(unittest.TestCase):
         project = make_project(self.root / "app", {"open": ""})
         (project / "openspec/changes/archive/2026-01-01-old").mkdir(parents=True)
         self.assertEqual([c.name for c in load_changes(project)], ["open"])
+
+    def test_archived_changes_come_most_recently_archived_first(self) -> None:
+        project = make_project(self.root / "app", {"open": ""})
+        archive = project / "openspec/changes/archive"
+        for folder in ("2026-01-05-older", "2026-03-01-newer"):
+            (archive / folder).mkdir(parents=True)
+            (archive / folder / "tasks.md").write_text("- [x] a\n")
+        archived = load_archived(project)
+        self.assertEqual([(c.name, c.archived) for c in archived], [("newer", "2026-03-01"), ("older", "2026-01-05")])
+        self.assertEqual(archived[0].done, 1)
+
+    def test_no_archive_folder_means_nothing_archived(self) -> None:
+        self.assertEqual(load_archived(make_project(self.root / "app", {"open": ""})), [])
 
 
 if __name__ == "__main__":

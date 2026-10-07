@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from ospec import git, system
 from ospec.page import write_page
-from ospec.repository import CHANGES_PATH, load_changes
+from ospec.repository import CHANGES_PATH, load_archived, load_changes
 from ospec.status import active_change
 from ospec.tui.canvas import Canvas
 from ospec.tui.theme import Theme
@@ -26,6 +26,7 @@ class App:
         self.settings = settings
         self.project = project
         self.changes: list[Change] = []
+        self.archived: list[Change] = []
         self.active: Change | None = None
         self.message = ""
         self.changes_view = ChangesView()  # kept, so returning to the list keeps the selection
@@ -43,10 +44,11 @@ class App:
         if self.project is None:
             return
         self.changes = load_changes(self.project)
+        self.archived = load_archived(self.project)
         self.active = active_change(self.changes, git.local_edits(self.project, CHANGES_PATH))
 
     def change_at(self, path: Path) -> Change | None:
-        return next((c for c in self.changes if c.path == path), None)
+        return next((c for c in (*self.changes, *self.archived) if c.path == path), None)
 
     # -- navigation
 
@@ -66,6 +68,9 @@ class App:
         self.message = "opened in browser" if opened else f"couldn't open {page}"
 
     def edit(self, change: Change, kind: DocKind) -> None:
+        if change.archived:
+            self.message = "archived changes are read-only"
+            return
         files = change.doc_files(kind)
         if not files or self.canvas is None:
             self.message = "nothing to edit"

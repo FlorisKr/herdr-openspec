@@ -29,6 +29,7 @@ panes, …). Nothing runs while herdr is closed.
 - The selected change's task groups (✓ done, ◐ started, ○ not started) and its next open task.
 - `⏎` opens the change in tabs: **Tasks · Proposal · Design · Specs**, with formatted markdown.
 - `m` opens the whole change as a web page with Mermaid diagrams rendered.
+- `a` switches to the archived changes (newest first) and back; they open read-only.
 
 | Key | Action |
 | --- | --- |
@@ -38,6 +39,7 @@ panes, …). Nothing runs while herdr is closed.
 | `space` / `b`, `g` / `G` | Page down / up, top / end |
 | `e` | Edit the current file in `$EDITOR` |
 | `m` | Open in the browser (diagrams rendered) |
+| `a` | Archived / open changes |
 | `r` | Reload |
 | `esc` / `q` | Back / quit |
 
@@ -70,8 +72,6 @@ ln -s "$(herdr plugin list --json | python3 -c 'import json,sys; print(next(p["p
 ospec [PATH]     Browse the OpenSpec project at PATH (default: current directory)
 ospec sync       Refresh the herdr sidebar (the plugin runs this for you)
 ```
-
-Archived changes (`openspec/changes/archive/`) aren't shown: ospec is about work in progress.
 
 ## Development
 
