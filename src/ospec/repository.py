@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
-from ospec.model import Change, parse_created, parse_tasks
+from ospec.model import Change, parse_archived, parse_created, parse_tasks
 
 CHANGES_PATH = "openspec/changes"
+ARCHIVE = "archive"
 
 
 def is_project(directory: Path) -> bool:
@@ -31,5 +33,18 @@ def load_change(path: Path) -> Change:
 def load_changes(project: Path) -> list[Change]:
     """Open changes (archive/ excluded): unfinished first, then most recently touched first."""
     base = project / CHANGES_PATH
-    changes = [load_change(d) for d in base.iterdir() if d.is_dir() and d.name != "archive"]
+    changes = [load_change(d) for d in base.iterdir() if d.is_dir() and d.name != ARCHIVE]
     return sorted(changes, key=lambda c: (c.complete, -c.mtime))
+
+
+def load_archived(project: Path) -> list[Change]:
+    """Archived changes (archive/<date>-<name>): most recently archived first, then most recently touched."""
+    base = project / CHANGES_PATH / ARCHIVE
+    if not base.is_dir():
+        return []
+    changes = []
+    for folder in base.iterdir():
+        if folder.is_dir():
+            date, name = parse_archived(folder.name)
+            changes.append(replace(load_change(folder), name=name, archived=date))
+    return sorted(changes, key=lambda c: (c.archived, c.mtime), reverse=True)

@@ -39,6 +39,6 @@ def render_page(title: str, page_sections: list[dict[str, str]]) -> str:
 
 def write_page(project: Path, change: Change, cache_dir: Path) -> Path:
     cache_dir.mkdir(parents=True, exist_ok=True)
-    out = cache_dir / f"{project.name}--{change.name}.html"
+    out = cache_dir / f"{project.name}--{change.path.name}.html"
     out.write_text(render_page(f"{project.name} › {change.name}", sections(change)))
     return out

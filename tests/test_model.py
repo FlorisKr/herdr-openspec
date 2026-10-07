@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ospec.model import DocKind, TaskGroup, parse_created, parse_tasks
+from ospec.model import DocKind, TaskGroup, parse_archived, parse_created, parse_tasks
 from ospec.repository import load_change
 
 TASKS = """\
@@ -50,6 +50,10 @@ class MetadataTest(unittest.TestCase):
     def test_created_date(self) -> None:
         self.assertEqual(parse_created("schema: spec-driven\ncreated: 2026-09-30\n"), "2026-09-30")
         self.assertEqual(parse_created("schema: spec-driven\n"), "")
+
+    def test_archive_folder_splits_into_date_and_name(self) -> None:
+        self.assertEqual(parse_archived("2026-09-30-add-2fa-login"), ("2026-09-30", "add-2fa-login"))
+        self.assertEqual(parse_archived("hand-moved"), ("", "hand-moved"))
 
 
 class ChangeTest(unittest.TestCase):

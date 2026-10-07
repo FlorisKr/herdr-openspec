@@ -43,14 +43,21 @@ class Canvas:
         return x
 
     def frame(self, title: str, keys: Sequence[tuple[str, str]], message: str = "") -> None:
-        """A title bar on top and a key legend (plus an optional message) at the bottom."""
+        """A title bar on top and a key legend (plus an optional message) at the bottom.
+
+        The message wins the space: legend entries that would run into it are dropped from the end.
+        """
         bar = Style.ACCENT | Style.REVERSE
         self.put(0, 0, [Span(" " * self.width, bar)])
         self.put(0, 1, [Span(title, bar | Style.BOLD)])
         bottom = self.height - 1
-        self.put(bottom, 1, [Span("  ".join(f"{key} {what}" for key, what in keys), Style.MUTED)])
+        message_x = max(self.width - len(message) - 2, 1)
+        legend = [f"{key} {what}" for key, what in keys]
+        while message and legend and 1 + len("  ".join(legend)) + 2 > message_x:
+            legend.pop()
+        self.put(bottom, 1, [Span("  ".join(legend), Style.MUTED)])
         if message:
-            self.put(bottom, max(self.width - len(message) - 2, 1), [Span(message, Style.SUCCESS)])
+            self.put(bottom, message_x, [Span(message, Style.SUCCESS)])
 
     def suspend(self, action: Callable[[], None]) -> None:
         """Hand the terminal to `action` (e.g. an editor), then take it back."""

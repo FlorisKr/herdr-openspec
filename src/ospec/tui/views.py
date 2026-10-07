@@ -69,54 +69,77 @@ class NoProjectView:
 
 
 class ChangesView:
-    KEYS = (
-        ("↑↓", "move"),
-        ("⏎/1-4", "open"),
-        ("m", "browser"),
-        ("r", "reload"),
-        ("q", "quit"),
-    )
+    """Open changes, or (toggled with `a`) the archived ones."""
 
     def __init__(self) -> None:
         self.selected = 0
+        self.archived = False
+
+    def listed(self, app: App) -> list[Change]:
+        return app.archived if self.archived else app.changes
 
     def draw(self, app: App, canvas: Canvas) -> None:
-        changes = app.changes
+        changes = self.listed(app)
         self.selected = min(self.selected, max(len(changes) - 1, 0))
-        canvas.frame(f"OpenSpec · {app.project_name}  —  {plural(len(changes), 'open change')}", self.KEYS, app.message)
+        canvas.frame(f"OpenSpec · {app.project_name}  —  {self._summary(app)}", self._keys(), app.message)
+        if not changes and self.archived:
+            canvas.put(2, 2, [Span("No archived changes.")])
+            return
         if not changes:
             canvas.put(2, 2, [Span("No open changes. "), Span("Start one with /opsx:propose", Style.MUTED)])
             return
         y = self._draw_list(app, canvas, changes)
         self._draw_detail(app, canvas, changes[self.selected], y + 1)
 
+    def _summary(self, app: App) -> str:
+        if self.archived:
+            return f"{len(app.archived)} archived"
+        summary = plural(len(app.changes), "open change")
+        return f"{summary}  ·  {len(app.archived)} archived" if app.archived else summary
+
+    def _keys(self) -> tuple[tuple[str, str], ...]:
+        return (
+            ("↑↓", "move"),
+            ("⏎/1-4", "open"),
+            ("m", "browser"),
+            ("a", "open changes" if self.archived else "archived"),
+            ("r", "reload"),
+            ("q", "quit"),
+        )
+
     def _draw_list(self, app: App, canvas: Canvas, changes: list[Change]) -> int:
         name_width = min(max(len(c.name) for c in changes) + 2, max(canvas.width - 46, 20))
+        count_width = max(3, *(len(str(c.total)) for c in changes))  # one width for all rows, so the dates line up
         visible = canvas.height - 13  # leave room for the detail panel
         top = max(0, self.selected - visible + 1)
         y = 2
         for index, change in enumerate(changes[top : top + visible], start=top):
-            canvas.put(y, 1, self._row(change, index == self.selected, change == app.active, name_width))
+            canvas.put(y, 1, self._row(change, index == self.selected, change == app.active, name_width, count_width))
             y += 1
             if y >= canvas.height - 11:
                 break
         return y
 
     @staticmethod
-    def _row(change: Change, selected: bool, active: bool, name_width: int) -> Line:
+    def _row(change: Change, selected: bool, active: bool, name_width: int, count_width: int) -> Line:
         name = change.name if len(change.name) <= name_width - 2 else change.name[: name_width - 3] + "…"
         return [
             Span("▸" if selected else " ", Style.ACCENT | Style.BOLD),
             Span("✎" if active else " ", Style.SUCCESS | Style.BOLD),
             Span(f"{name:<{name_width}}", Style.BOLD | Style.REVERSE if selected else Style.NONE),
             *progress_bar(change.done, change.total),
-            Span(f" {change.done:>3}/{change.total:<3} ", Style.SUCCESS if change.complete else Style.NONE),
-            Span(f"{change.created:<11}", Style.MUTED),
+            Span(
+                f" {change.done:>{count_width}}/{change.total:<{count_width}} ",
+                Style.SUCCESS if change.complete else Style.NONE,
+            ),
+            Span(f"{change.archived or change.created:<11}", Style.MUTED),
             *(Span(f"{kind.label[0]} ", Style.ACCENT if change.has(kind) else Style.MUTED) for kind in TABS),
         ]
 
     @staticmethod
     def _state(change: Change, active: bool) -> str:
+        if change.archived:
+            return f"archived {change.archived}"
         if change.complete:
             state = "complete — ready to archive"
         else:
@@ -150,16 +173,18 @@ class ChangesView:
                 ],
             )
             y += 1
-        if change.next_task and y < canvas.height - 2:
+        if change.next_task and not change.archived and y < canvas.height - 2:
             canvas.put(y + 1, 2, [Span("next ▸ ", Style.WARNING | Style.BOLD), Span(change.next_task)])
 
     def handle(self, app: App, key: int) -> bool:
-        changes = app.changes
+        changes = self.listed(app)
         selected = changes[self.selected] if changes else None
         if key in DOWN:
             self.selected = min(self.selected + 1, max(len(changes) - 1, 0))
         elif key in UP:
             self.selected = max(self.selected - 1, 0)
+        elif key == ord("a"):
+            self.archived, self.selected = not self.archived, 0
         elif key == ord("r"):
             app.reload()
             app.message = "reloaded"
@@ -206,7 +231,8 @@ class DocView:
         if change is None:  # archived or deleted since we opened it (seen after a reload)
             app.show_changes()
             return
-        canvas.frame(f"{app.project_name} › {change.name}", self.KEYS, app.message)
+        where = f"{app.project_name} › archive" if change.archived else app.project_name
+        canvas.frame(f"{where} › {change.name}", self.KEYS, app.message)
         self._draw_tabs(canvas, change)
         lines = markdown.render(change.read(self.kind), min(canvas.width - 4, DOC_WIDTH))
         body = canvas.height - 4
